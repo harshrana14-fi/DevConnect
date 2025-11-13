@@ -1,4 +1,4 @@
-import React from 'react'
+
 import CreateCommunity from '../components/CreateCommunity'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'

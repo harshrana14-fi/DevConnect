@@ -1,4 +1,4 @@
-import React from 'react'
+
 import PostDetail from '../components/PostDetail';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';

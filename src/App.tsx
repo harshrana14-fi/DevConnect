@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import { Routes, Route } from 'react-router'
 import Home from './pages/Home.tsx'
 import CreatePostPage from './pages/CreatePostPage.tsx'
 import Navbar from './components/Navbar.tsx'
 import PostPage from './pages/PostPage.tsx'
 import CreateCommunityPage from './pages/CreateCommunityPage.tsx'
-import CommunityList from './components/CommunityList.tsx'
 import {CommunityPage} from './pages/CommunityPage.tsx'
 import { CommunitiesPage } from './pages/CommunitiesPage.tsx'
 
