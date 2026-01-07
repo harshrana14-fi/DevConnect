@@ -38,6 +38,11 @@ const Navbar = () => {
                     ~/messages
                     <MessageNotificationBadge />
                 </Link>
+                <Link to="/contributors"
+                   className="font-mono text-sm text-gray-300 hover:text-cyan-400 transition duration-200" >
+                  ~/contributors
+                 </Link>
+
             </div>
 
             {/*Desktop Auth*/}
