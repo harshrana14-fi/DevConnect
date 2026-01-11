@@ -87,7 +87,8 @@ const Navbar = () => {
                                 />
                             )}
                             {displayName}
-                        </Link>
+                        </button>
+                        
                         <button 
                             onClick={handleSignOut} 
                             className="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 border border-red-500/50 rounded-lg text-red-300 font-mono text-sm transition"
