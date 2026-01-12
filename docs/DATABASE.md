@@ -301,6 +301,71 @@ CREATE INDEX idx_community_members_role ON CommunityMembers(role);
 
 ---
 
+## Event Tables
+
+### Events Table
+Stores community events and meetups.
+
+```sql
+CREATE TABLE Events (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  event_date TIMESTAMP NOT NULL,
+  location TEXT,
+  is_virtual BOOLEAN DEFAULT FALSE,
+  meeting_link TEXT,
+  max_attendees INTEGER,
+  image_url TEXT,
+  tags TEXT[],
+  organizer_id UUID NOT NULL REFERENCES auth.users(id),
+  community_id BIGINT REFERENCES Communities(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_events_date ON Events(event_date);
+CREATE INDEX idx_events_organizer ON Events(organizer_id);
+CREATE INDEX idx_events_community ON Events(community_id);
+```
+
+**Purpose:** Manages community events with details like title, description, date, location, and organizer.
+
+**Relationships:**
+- `organizer_id → auth.users(id)` (1 user → many events)
+- `community_id → Communities(id)` (1 community → many events, optional)
+
+**Row Level Security:** Events are viewable by everyone, but only organizers can create events.
+
+---
+
+### EventAttendees Table
+Tracks user registration for events.
+
+```sql
+CREATE TABLE EventAttendees (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  event_id BIGINT NOT NULL REFERENCES Events(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'attending' CHECK (status IN ('attending', 'maybe', 'not_attending')),
+  registered_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(event_id, user_id)
+);
+
+CREATE INDEX idx_event_attendees_event ON EventAttendees(event_id);
+CREATE INDEX idx_event_attendees_user ON EventAttendees(user_id);
+```
+
+**Purpose:** Manages user attendance for events with status tracking.
+
+**Relationships:**
+- `event_id → Events(id)` (1 event → many attendees)
+- `user_id → auth.users(id)` (1 user → many event registrations)
+
+**Row Level Security:** Users can register for events they own.
+
+---
+
 ## Row Level Security (RLS)
 All tables enforce RLS:
 - Public read access where applicable

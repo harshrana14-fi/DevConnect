@@ -340,3 +340,74 @@ BEGIN
   WHERE created_at < NOW() - INTERVAL '10 seconds';
 END;
 $$ LANGUAGE plpgsql;
+
+-- Communities table for organizing posts and events
+CREATE TABLE Communities (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  avatar_url TEXT,
+  created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  member_count INTEGER DEFAULT 0
+);
+
+CREATE INDEX idx_communities_name 
+ON Communities USING gin(name gin_trgm_ops);
+
+-- Enable Row Level Security for Communities
+ALTER TABLE Communities ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy for Communities: Everyone can view, only creators can update
+CREATE POLICY "Communities are viewable by everyone" ON Communities
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can create communities" ON Communities
+  FOR INSERT WITH CHECK (created_by = auth.uid());
+
+CREATE POLICY "Users can update own communities" ON Communities
+  FOR UPDATE USING (created_by = auth.uid());
+
+CREATE POLICY "Users can delete own communities" ON Communities
+  FOR DELETE USING (created_by = auth.uid());
+
+-- Events table for community events and meetups
+CREATE TABLE Events (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  event_date TIMESTAMP NOT NULL,
+  location TEXT,
+  is_virtual BOOLEAN DEFAULT FALSE,
+  meeting_link TEXT,
+  max_attendees INTEGER,
+  image_url TEXT,
+  tags TEXT[],
+  organizer_id UUID NOT NULL REFERENCES auth.users(id),
+  community_id BIGINT REFERENCES Communities(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE EventAttendees (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  event_id BIGINT NOT NULL REFERENCES Events(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'attending' CHECK (status IN ('attending', 'maybe', 'not_attending')),
+  registered_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(event_id, user_id)
+);
+
+CREATE INDEX idx_events_date ON Events(event_date);
+CREATE INDEX idx_events_organizer ON Events(organizer_id);
+CREATE INDEX idx_events_community ON Events(community_id);
+
+ALTER TABLE Events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE EventAttendees ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Events are viewable by everyone" ON Events FOR SELECT USING (true);
+CREATE POLICY "Users can create events" ON Events FOR INSERT WITH CHECK (auth.uid() = organizer_id);
+CREATE POLICY "Users can register for events" ON EventAttendees FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+INSERT INTO storage.buckets (id, name, public) VALUES ('event-images', 'event-images', true);

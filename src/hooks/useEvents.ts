@@ -1,12 +1,45 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../supabase-client';
+import { supabase, isBackendAvailable } from '../supabase-client';
 import { useAuth } from './useAuth';
 import type { Event, EventWithDetails, CreateEventData, EventFilters, EventAttendee } from '../types/events';
+import { mockEvents } from '../utils/mockEvents';
 
 export const useEvents = (filters?: EventFilters) => {
   return useQuery({
     queryKey: ['events', filters],
     queryFn: async () => {
+      if (!isBackendAvailable || !supabase) {
+        // Return mock data in demo mode
+        try {
+          let filteredEvents = [...mockEvents];
+          
+          if (filters?.community_id) {
+            filteredEvents = filteredEvents.filter(event => event.community_id === filters.community_id);
+          }
+          
+          if (filters?.search) {
+            const searchTerm = filters.search.toLowerCase();
+            filteredEvents = filteredEvents.filter(event => 
+              event.title.toLowerCase().includes(searchTerm) || 
+              event.description.toLowerCase().includes(searchTerm)
+            );
+          }
+          
+          // Convert to the expected format
+          return filteredEvents.map(event => ({
+            ...event,
+            attendee_count: event.max_attendees ? Math.floor((event.max_attendees || 100) * 0.6) : 30, // Calculate approximate attendee count
+            Communities: { name: `Community ${event.community_id || 'General'}` },
+            EventAttendees: [], // Mock attendees
+            is_organizer: false,
+            user_attendance: undefined
+          })) as unknown as EventWithDetails[];
+        } catch (error) {
+          console.error('Error in demo mode events:', error);
+          throw new Error('Demo mode error: Unable to load events');
+        }
+      }
+      
       let query = supabase
         .from('Events')
         .select(`
@@ -37,6 +70,30 @@ export const useEvent = (eventId: number) => {
   return useQuery({
     queryKey: ['event', eventId],
     queryFn: async () => {
+      if (!isBackendAvailable || !supabase) {
+        // Return mock data in demo mode
+        try {
+          const mockEvent = mockEvents.find(e => e.id === eventId);
+          if (!mockEvent) {
+            throw new Error('Event not found');
+          }
+          
+          const event: EventWithDetails = {
+            ...mockEvent,
+            attendee_count: mockEvent.max_attendees ? Math.floor((mockEvent.max_attendees || 100) * 0.6) : 30, // Calculate approximate attendee count
+            Communities: { name: `Community ${mockEvent.community_id || 'General'}` },
+            EventAttendees: [], // Mock attendees
+            is_organizer: user?.id === mockEvent.organizer_id,
+            user_attendance: undefined
+          };
+          
+          return event;
+        } catch (error) {
+          console.error('Error in demo mode event:', error);
+          throw new Error('Demo mode error: Unable to load event');
+        }
+      }
+      
       const { data, error } = await supabase
         .from('Events')
         .select(`
@@ -66,6 +123,32 @@ export const useCreateEvent = () => {
 
   return useMutation({
     mutationFn: async (data: CreateEventData) => {
+      if (!isBackendAvailable || !supabase) {
+        // Simulate event creation in demo mode
+        const newEvent = {
+          id: Math.floor(Math.random() * 1000),
+          ...data,
+          organizer_id: user!.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          attendee_count: 0,
+          is_organizer: true,
+          user_attendance: undefined,
+          Communities: { name: data.community_id ? `Community ${data.community_id}` : 'General' },
+          EventAttendees: []
+        };
+        
+        // Update the query cache
+        queryClient.setQueryData(['events'], (old: any) => {
+          if (Array.isArray(old)) {
+            return [newEvent, ...old];
+          }
+          return [newEvent];
+        });
+        
+        return newEvent;
+      }
+      
       const { data: event, error } = await supabase
         .from('Events')
         .insert({
@@ -90,6 +173,12 @@ export const useEventAttendance = () => {
 
   const register = useMutation({
     mutationFn: async ({ eventId, status }: { eventId: number; status: 'attending' | 'maybe' | 'not_attending' }) => {
+      if (!isBackendAvailable || !supabase) {
+        // Simulate event registration in demo mode
+        // In a real app, this would update the local state
+        return;
+      }
+      
       const { error } = await supabase
         .from('EventAttendees')
         .insert({
