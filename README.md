@@ -74,6 +74,8 @@ DevConnect is a full-stack web application that enables developers to:
 - 📅 **Event Management** - Create, manage, and attend developer events and meetups
 - 🎟️ **Event Registration** - RSVP system with attendance tracking
 - 🌐 **Virtual Events** - Support for online events with meeting links
+- 📸 **Event Detail Pages** - Beautiful, comprehensive event pages with banner images and rich details
+- 📊 **Real-time Event Stats** - Live updating event statistics and attendee information
 - 🎨 **Modern UI** - Dark theme with cyan accents, professional design
 - 📱 **Responsive Design** - Works on desktop and mobile
 
